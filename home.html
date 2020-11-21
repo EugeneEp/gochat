@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Chat</title>
+<style type="text/css">
+html {
+    overflow: hidden;
+}
+
+body {
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: white;
+}
+
+#form{
+    border: 1px solid gray;
+    padding: 20px 40px;
+    background-color: antiquewhite;
+    margin: 5px;
+    border-radius: 10px;
+}
+#active-rooms{
+    vertical-align: top;
+    padding: 10px;
+}
+
+#active-rooms td{
+    border-bottom: 1px solid gray!important;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+}
+
+#active-rooms table{
+    width: 100%;
+}
+
+#active-rooms, #form-td{
+    vertical-align: top;
+}
+
+</style>
+</head>
+<body>
+<table id="main-table">
+    <tr>
+        <td id='form-td'>
+            <form id="form">
+                <h3>Создать комнату</h3>
+                <input type="text" name="name" placeholder="Название комнаты" required="">
+                <br>
+                <br>
+                <input type="submit" value="Создать" />
+            </form>
+        </td>
+        <td id="active-rooms">
+            <h4 id='error-msg'></h4>
+            <h3>Активные комнаты</h3>
+            <table>
+
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    var conn;
+
+    function appendLog(item) {
+        var log = $("#error-msg");
+        log.html(item);
+    }
+
+    $("#form").submit(function(){
+        $this = $(this);
+        var name = string_to_slug($this.find('input[name="name"]').val())
+        if (!conn) {
+            return false;
+        }
+        if (name == "") {
+            return false;
+        }
+        arr = {"action":"create","channel":name}
+        conn.send(JSON.stringify(arr));
+        $("#form input[type='text']").val("")
+        return false;
+    });
+
+    if (window["WebSocket"]) {
+        conn = new WebSocket("ws://" + document.location.host + "/ws/MainChannel");
+        conn.onclose = function (evt) {
+            appendLog("<div><b>Connection closed.</b></div>");
+        };
+        conn.onmessage = function (evt) {
+            var messages = evt.data.split('\n');
+            for (var i = 0; i < messages.length; i++) {
+                var msg = JSON.parse(messages[i]);
+                if(msg['channel'] != undefined){
+                    $("#active-rooms table").prepend("\
+                        <tr>\
+                            <td>"+ msg['channel'] +"</td>\
+                            <td><a href='chat/"+ msg['channel'] +"'>Перейти</a></td>\
+                        </tr>");
+                }else if(msg['error'] != undefined){
+                    appendLog("<div><b>"+msg['error']+"</b></div>");
+                }else{
+                    $.each(msg, function(key, value){
+                        if(value !== "MainChannel"){
+                            $("#active-rooms table").prepend("\
+                            <tr>\
+                                <td>"+ value +"</td>\
+                                <td><a href='chat/"+ value +"'>Перейти</a></td>\
+                            </tr>");
+                        }
+                    });
+                }
+            }
+        };
+    } else {
+        appendLog("<div><b>Your browser does not support WebSockets.</b></div>");
+    }
+    
+    function string_to_slug (str) {
+        str = str.replace(/^\s+|\s+$/g, ''); // trim
+        str = str.toLowerCase();
+      
+        // remove accents, swap ñ for n, etc
+        var from = "àáäâèéëêìíïîòóöôùúüûñç·/_,:;";
+        var to   = "aaaaeeeeiiiioooouuuunc------";
+        for (var i=0, l=from.length ; i<l ; i++) {
+            str = str.replace(new RegExp(from.charAt(i), 'g'), to.charAt(i));
+        }
+
+        str = str.replace(/[^a-z0-9 -]/g, '') // remove invalid chars
+            .replace(/\s+/g, '-') // collapse whitespace and replace by -
+            .replace(/-+/g, '-'); // collapse dashes
+
+        return str;
+    }
+});
+</script>
+</html>

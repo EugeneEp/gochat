@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Chat</title>
+<style type="text/css">
+html {
+    overflow: hidden;
+}
+
+body {
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: gray;
+}
+
+#log {
+    background: white;
+    margin: 0;
+    padding: 0.5em 0.5em 0.5em 0.5em;
+    position: absolute;
+    top: 0.5em;
+    left: 0.5em;
+    right: 0.5em;
+    bottom: 3em;
+    overflow: auto;
+}
+
+#form {
+    padding: 0 0.5em 0 0.5em;
+    margin: 0;
+    position: absolute;
+    bottom: 1em;
+    left: 10px;
+    width: 100%;
+    overflow: hidden;
+}
+
+#form1 {
+    background-color: antiquewhite;
+    padding: 5px 10px;
+    margin: 0;
+    position: absolute;
+    bottom: 0.6em;
+    left: 510px;
+    border-radius: 5px;
+    width: 350px;
+    overflow: hidden;
+}
+
+</style>
+</head>
+<body>
+<div id="log"></div>
+<form id="form">
+    <input type="submit" value="Отправить" />
+    <input type="text" id="msg" size="52" autofocus />
+</form>
+<form id="form1">
+    <input type="submit" value="Отправить" />
+    <input type="file" id="file" name="file" required="" />
+</form>
+</body>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+    var ChatName = "{{.ChatName}}";
+    var conn;
+
+    function appendLog(item) {
+        var log = $("#log");
+        var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
+        log.append(item);
+        if (doScroll) {
+            log.scrollTop = log.scrollHeight - log.clientHeight;
+        }
+    }
+
+    $("#form").submit(function(){
+        var msg = $("#msg");
+        if (!conn) {
+            return false;
+        }
+        if (msg.val() == "") {
+            return false;
+        }
+        arr = {"action":"msg","message":msg.val()}
+        conn.send(JSON.stringify(arr));
+        msg.val("");
+        return false;
+    });
+
+    $("#form1").submit(function(){
+        var msg = $("#file");
+        if (!conn) {
+            return false;
+        }
+        if (msg.val() == "") {
+            return false;
+        }
+
+        var current_date = Math.floor(Date.now() / 1000);
+        var filename = current_date + "." + msg[0].files[0].name.split('.').pop()
+
+        var fd = new FormData();
+        fd.append('file', msg[0].files[0], filename);
+        $.ajax({
+               url: document.location.protocol + "//" + document.location.host + "/file/" + ChatName + "",
+               contentType: false,
+               processData: false,
+               crossDomain: true,
+               type: 'POST',
+               data: fd,
+               success: function(json) {
+                console.log(json)
+                    var arr = {"action":"file","message":filename}
+                    conn.send(JSON.stringify(arr));
+               }
+        });
+        return false;
+    });
+
+    if (window["WebSocket"]) {
+        conn = new WebSocket("ws://" + document.location.host + "/ws/" + ChatName);
+        conn.onclose = function (evt) {
+            appendLog("<div><b>Connection closed.</b></div>");
+        };
+        conn.onmessage = function (evt) {
+            var messages = evt.data.split('\n');
+            for (var i = 0; i < messages.length; i++) {
+                var msg = JSON.parse(messages[i]);
+                if (msg['action'] == 'file'){
+                    appendLog("<div><b>файл: </b><a download href='" + document.location.protocol + "//" + document.location.host + "/files/" + ChatName + "/" + msg['message'] + "'>" + msg['message'] + "</a></div>");
+                }else
+                    appendLog("<div>" + msg['message'] + "</div>");
+            }
+        };
+    } else {
+        appendLog("<div><b>Your browser does not support WebSockets.</b></div>");
+    }
+});
+</script>
+</html>

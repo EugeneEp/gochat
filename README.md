@@ -1,6 +1,6 @@
-# gochat
+## gochat
 ___
-### Чат на вебсокетах 
+##### Чат на вебсокетах 
 ___
-### За основу взят [пример](https://github.com/gorilla/websocket/tree/master/examples/chat) из репозитория библиотеки, используемой в данном проекте
+##### За основу взят [пример](https://github.com/gorilla/websocket/tree/master/examples/chat) из репозитория библиотеки, используемой в данном проекте
 ___
